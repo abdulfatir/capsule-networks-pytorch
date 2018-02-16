@@ -21,7 +21,7 @@ class CapsNet(torch.nn.Module):
             nn.ReLU(inplace=True),
             nn.Linear(512, 1024),
             nn.ReLU(inplace=True),
-            nn.Linear(1024, np.prod(input_shape)),
+            nn.Linear(1024, int(np.prod(input_shape))),
             nn.Sigmoid()
         )
 
