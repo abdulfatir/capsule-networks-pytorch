@@ -1,17 +1,18 @@
 import torch
 import torch.nn.functional as F
 import torch.nn as nn
+import numpy as np
 from torch.autograd import Variable
 
 from layers import PrimaryCapsule, Capsule
 
 
 class CapsNet(torch.nn.Module):
-    def __init__(self, in_channels, num_primary_capsules):
+    def __init__(self, in_channels, num_primary_capsules, input_shape=[1, 28, 28]):
         super(CapsNet, self).__init__()
 
         self.CUDA = torch.cuda.is_available()
-
+        self.input_shape = input_shape
         self.conv1 = torch.nn.Conv2d(in_channels, 256, 9)
         self.primary_capsule = PrimaryCapsule(256, 32, 8, 9, 2)
         self.digit_capsule = Capsule(num_primary_capsules, 8, 10, 16)
@@ -20,7 +21,7 @@ class CapsNet(torch.nn.Module):
             nn.ReLU(inplace=True),
             nn.Linear(512, 1024),
             nn.ReLU(inplace=True),
-            nn.Linear(1024, 784),
+            nn.Linear(1024, np.prod(input_shape)),
             nn.Sigmoid()
         )
 
@@ -39,4 +40,6 @@ class CapsNet(torch.nn.Module):
             mask = mask.cuda()
         mask = mask.index_select(dim=0, index=indices)
         recons = self.decoder((v * mask[:, :, None]).view(batch_size, -1))
+        shape = [-1] + self.input_shape
+        recons = recons.view(shape)
         return class_probs, recons

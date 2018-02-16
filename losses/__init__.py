@@ -10,6 +10,6 @@ def margin_loss(class_probs, labels):
 
 
 def reconstruction_loss(recons, images):
-    loss = (recons - images.view(-1, 784)) ** 2
-    loss = loss.sum(dim=-1)
+    loss = (recons - images) ** 2
+    loss = loss.sum(dim=-1).sum(dim=-1).sum(dim=-1)
     return loss.mean()
