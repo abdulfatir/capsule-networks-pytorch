@@ -23,10 +23,10 @@ class CapsNet(torch.nn.Module):
             nn.Sigmoid()
         )
 
-    def forward(self, x):
+    def forward(self, x, y=None):
         batch_size = x.size(0)
-        x = F.relu(self.conv1(x))
-        x = F.relu(self.conv2(x))
+        x = F.relu(self.conv1(x), inplace=True)
+        x = self.conv2(x)
         x = x.view((-1, 32 * 6 * 6, 8))
         x = squash(x)
         u_hat = torch.matmul(x[:, None, :, None, :], self.W[None, :, :, :, :])
@@ -42,10 +42,14 @@ class CapsNet(torch.nn.Module):
 
             if i is not 2:
                 db = (v * u_hat).sum(dim=-1, keepdim=True)
+                # print(u_hat.shape, v.shape, b.shape, db.shape)
                 b = b + db
         v = v.squeeze()
-        class_probs = torch.sqrt((v ** 2).sum(dim=-1))
-        _, indices = torch.max(class_probs, dim=-1)
+        class_probs = F.softmax(torch.sqrt((v ** 2).sum(dim=-1)), dim=-1)
+        if y is not None:
+            indices = y
+        else:
+            _, indices = torch.max(class_probs, dim=-1)
         if self.CUDA:
             mask = Variable(torch.eye(10)).cuda().index_select(dim=0, index=indices)
         else:
