@@ -78,12 +78,12 @@ def test_mnist():
     transform = transforms.Compose(
         [transforms.ToTensor()])
 
-    trainset = torchvision.datasets.FashionMNIST(root='./data/mnist', train=True,
+    trainset = torchvision.datasets.MNIST(root='./data/mnist', train=True,
                                             download=True, transform=transform)
     trainloader = torch.utils.data.DataLoader(trainset, batch_size=32,
                                               shuffle=True)
 
-    testset = torchvision.datasets.FashionMNIST(root='./data/mnist', train=False,
+    testset = torchvision.datasets.MNIST(root='./data/mnist', train=False,
                                            download=True, transform=transform)
     testloader = torch.utils.data.DataLoader(testset, batch_size=32,
                                              shuffle=False)
