@@ -1,10 +1,13 @@
+from __future__ import print_function
+
 import torch
 import torchvision
 import torchvision.transforms as transforms
 import torch.nn.functional as F
+import torch.cuda
 from torch.autograd import Variable
 from torch.optim import Adam
-from capsnet import CapsNet
+from models.capsnet import CapsNet
 
 
 def margin_loss(class_probs, labels):
@@ -21,10 +24,12 @@ def reconstruction_loss(recons, images):
     return loss
 
 
+CUDA = torch.cuda.is_available()
 net = CapsNet()
-print net
-print "# parameters: ", sum(param.numel() for param in net.parameters())
-
+if CUDA:
+    net.cuda()
+print (net)
+print ("# parameters: ", sum(param.numel() for param in net.parameters()))
 
 transform = transforms.Compose(
     [transforms.ToTensor(),
@@ -45,12 +50,15 @@ optimizer = Adam(net.parameters())
 
 for epoch in range(100):
     for i, data in enumerate(trainloader, 0):
-        inputs, labs = data
-        labels = torch.eye(10).index_select(dim=0, index=labs)
-        inputs, labels = Variable(inputs), Variable(labels)
+        inputs, labels = data
+        labels_one_hot = torch.eye(10).index_select(dim=0, index=labels)
+        if CUDA:
+            inputs, labels_one_hot, labels = Variable(inputs).cuda(), Variable(labels_one_hot).cuda(), Variable(labels).cuda()
+        else:
+            inputs, labels_one_hot, labels = Variable(inputs), Variable(labels_one_hot), Variable(labels)
         class_probs, recons = net(inputs)
-        acc = torch.mean((Variable(labs) == torch.max(class_probs, dim=-1)[1]).double())
-        loss = criterion(class_probs, labels, recons, inputs)
+        acc = torch.mean((labels == torch.max(class_probs, -1)[1]).double())
+        loss = criterion(class_probs, labels_one_hot, recons, inputs)
         loss.backward()
         optimizer.step()
-        print loss.data[0], acc.data[0]
+        print (loss.data[0], acc.data[0])

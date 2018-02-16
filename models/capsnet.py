@@ -2,12 +2,14 @@ import torch
 import torch.nn.functional as F
 import torch.nn as nn
 from torch.autograd import Variable
-from funcs import squash
+from models.funcs import squash
 
 
 class CapsNet(torch.nn.Module):
     def __init__(self):
         super(CapsNet, self).__init__()
+
+        self.CUDA = torch.cuda.is_available()
 
         self.conv1 = torch.nn.Conv2d(1, 256, 9)
         self.conv2 = torch.nn.Conv2d(256, 256, 9, 2)
@@ -29,7 +31,10 @@ class CapsNet(torch.nn.Module):
         x = squash(x)
         u_hat = torch.matmul(x[:, None, :, None, :], self.W[None, :, :, :, :])
         # u_hat.shape = batch_size x 10 x 1152 x 1 x 16
-        b = Variable(torch.zeros(*u_hat.size()))
+        if self.CUDA:
+            b = Variable(torch.zeros(*u_hat.size())).cuda()
+        else:
+            b = Variable(torch.zeros(*u_hat.size()))
 
         for i in range(3):
             c = F.softmax(b, dim=2)
@@ -41,6 +46,9 @@ class CapsNet(torch.nn.Module):
         v = v.squeeze()
         class_probs = torch.sqrt((v ** 2).sum(dim=-1))
         _, indices = torch.max(class_probs, dim=-1)
-        mask = Variable(torch.eye(10)).index_select(dim=0, index=indices)
+        if self.CUDA:
+            mask = Variable(torch.eye(10)).cuda().index_select(dim=0, index=indices)
+        else:
+            mask = Variable(torch.eye(10)).index_select(dim=0, index=indices)
         recons = self.decoder((v * mask[:, :, None]).view(batch_size, -1))
         return class_probs, recons
